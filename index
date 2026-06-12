@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Survei Kepuasan Pelanggan – Lippo Land</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; background: #f0f4f5; color: #1f2937; padding: 20px; line-height: 1.5; }
+    .card { max-width: 620px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.08); overflow: hidden; }
+
+    .header { background: #2C8C99; color: #fff; padding: 28px 28px 22px; text-align: center; position: relative; }
+    .header::after { content:''; display:block; height:4px; background:linear-gradient(90deg,#226B75,#3aa7b5,#226B75); position:absolute; bottom:0; left:0; right:0; }
+    .header .logo-text { font-size:11px; letter-spacing:3px; text-transform:uppercase; opacity:.85; margin-bottom:8px; }
+    .header h1 { font-size:18px; font-weight:700; letter-spacing:.5px; }
+    .header h2 { font-size:13px; font-weight:400; margin-top:4px; opacity:.85; }
+    .anon-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); border-radius:20px; padding:4px 12px; font-size:11px; margin-top:12px; }
+
+    .body { padding: 24px 28px; }
+    .intro { font-size:13px; color:#6b7280; background:#eef7f8; border-left:3px solid #2C8C99; padding:10px 14px; border-radius:0 6px 6px 0; margin-bottom:22px; }
+
+    .question { border:1px solid #e5e7eb; border-radius:10px; padding:18px; margin-bottom:14px; transition:border-color .2s; }
+    .question.answered { border-color:#2C8C99; }
+    .question p { font-size:14px; font-weight:600; margin-bottom:14px; color:#111827; }
+    .question .num { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:#2C8C99; color:#fff; border-radius:50%; font-size:11px; font-weight:700; margin-right:7px; }
+
+    .scale { display:flex; gap:8px; }
+    .scale label { flex:1; text-align:center; cursor:pointer; border:2px solid #e5e7eb; border-radius:8px; padding:10px 4px; font-size:15px; font-weight:700; transition:all .15s; background:#fff; color:#6b7280; user-select:none; }
+    .scale label:hover { border-color:#2C8C99; color:#2C8C99; background:#eef7f8; }
+    .scale label.sel { background:#2C8C99; color:#fff; border-color:#2C8C99; }
+    .scale input { display:none; }
+    .scale-legend { display:flex; justify-content:space-between; font-size:10px; color:#9ca3af; margin-top:6px; }
+
+    .field { margin-bottom:18px; }
+    .field label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#374151; }
+    .saran-box { border:2px solid #e5e7eb; border-radius:10px; padding:16px; transition:border-color .3s; }
+    .saran-box.listening { border-color:#2C8C99; background:#eef7f8; }
+
+    .mic-status { display:flex; align-items:center; gap:10px; margin-bottom:12px; min-height:36px; }
+    .mic-icon { width:36px; height:36px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:17px; background:#e5e7eb; color:#6b7280; transition:all .2s; }
+    .mic-icon.listening { background:#2C8C99; color:#fff; animation:pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+    .mic-label { font-size:13px; color:#6b7280; flex:1; }
+    .mic-label.listening { color:#2C8C99; font-weight:600; }
+    .mic-label.error { color:#c0392b; }
+
+    .wave { display:none; align-items:center; gap:3px; }
+    .wave.show { display:flex; }
+    .wave span { display:block; width:4px; border-radius:2px; background:#2C8C99; animation:wave 1s ease-in-out infinite; }
+    .wave span:nth-child(1){height:8px;animation-delay:0s}
+    .wave span:nth-child(2){height:16px;animation-delay:.15s}
+    .wave span:nth-child(3){height:22px;animation-delay:.3s}
+    .wave span:nth-child(4){height:16px;animation-delay:.45s}
+    .wave span:nth-child(5){height:8px;animation-delay:.6s}
+    @keyframes wave { 0%,100%{transform:scaleY(.5)} 50%{transform:scaleY(1)} }
+
+    .saran-wrap { position:relative; }
+    textarea { width:100%; padding:10px 44px 10px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; resize:vertical; min-height:80px; font-family:inherit; transition:border-color .15s; }
+    textarea:focus { outline:none; border-color:#2C8C99; }
+    .mic-btn-inline { position:absolute; right:8px; bottom:8px; width:36px; height:36px; border-radius:50%; border:none; background:#2C8C99; color:#fff; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+    .mic-btn-inline:hover { background:#226B75; }
+    .mic-btn-inline.recording { background:#c0392b; }
+
+    .mic-actions { display:flex; gap:8px; margin-top:10px; }
+    .btn-mic { flex:1; padding:9px; border-radius:8px; border:none; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+    .btn-start { background:#2C8C99; color:#fff; }
+    .btn-start:hover:not(:disabled) { background:#226B75; }
+    .btn-stop  { background:#f3f4f6; color:#374151; }
+    .btn-stop:hover:not(:disabled) { background:#e5e7eb; }
+    .btn-mic:disabled { opacity:.4; cursor:not-allowed; }
+
+    .keterangan { font-size:12px; color:#6b7280; background:#f9fafb; border-radius:8px; padding:12px 14px; margin:20px 0; display:flex; flex-wrap:wrap; gap:4px 12px; }
+    .keterangan b { color:#374151; display:block; width:100%; margin-bottom:4px; }
+    .keterangan span { white-space:nowrap; }
+    .keterangan .dot { color:#2C8C99; font-weight:700; }
+
+    button#submitBtn { width:100%; padding:14px; border:none; border-radius:10px; background:#2C8C99; color:#fff; font-size:15px; font-weight:700; cursor:pointer; letter-spacing:.3px; transition:background .15s, transform .1s; }
+    button#submitBtn:hover:not(:disabled) { background:#226B75; }
+    button#submitBtn:active:not(:disabled) { transform:scale(.99); }
+    button#submitBtn:disabled { background:#9ca3af; cursor:not-allowed; }
+
+    .err { color:#c0392b; font-size:13px; text-align:center; margin-top:10px; padding:8px; background:#fdf0ef; border-radius:6px; }
+    .msg { text-align:center; padding:50px 28px; }
+    .msg .ico { width:64px; height:64px; background:#2C8C99; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; margin:0 auto 16px; }
+    .msg h3 { font-size:20px; color:#2C8C99; margin-bottom:8px; }
+    .msg p { color:#6b7280; font-size:14px; line-height:1.6; }
+
+    .loading { text-align:center; padding:50px 28px; color:#9ca3af; font-size:14px; }
+    .spinner { width:36px; height:36px; border:3px solid #f3f4f6; border-top-color:#2C8C99; border-radius:50%; margin:0 auto 14px; animation:spin .8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .hidden { display:none; }
+    .footer { text-align:center; padding:14px; font-size:11px; color:#9ca3af; border-top:1px solid #f3f4f6; }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <div class="header">
+    <div class="logo-text">Lippo Land</div>
+    <h1>Survei Kepuasan Pelanggan</h1>
+    <h2>Serah Terima Unit</h2>
+    <div class="anon-badge">🔒 Survei ini anonim</div>
+  </div>
+
+  <div class="loading" id="loadingArea">
+    <div class="spinner"></div>
+    Memuat pertanyaan...
+  </div>
+
+  <div class="body hidden" id="formArea">
+    <div class="intro">
+      Mohon berikan rating dari <b>1 (Sangat Tidak Puas)</b> hingga <b>5 (Sangat Puas)</b> untuk setiap pertanyaan berikut.
+    </div>
+
+    <div id="questions"></div>
+
+    <div class="field" id="saranSection">
+      <label>💬 Saran / Masukan <span style="font-weight:400;color:#9ca3af">(opsional)</span></label>
+      <div class="saran-box" id="saranBox">
+        <div class="mic-status">
+          <div class="mic-icon" id="micIcon">🎤</div>
+          <div class="mic-label" id="micLabel">Tekan "Mulai Bicara" untuk merekam suara Anda</div>
+          <div class="wave" id="micWave">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="saran-wrap">
+          <textarea id="saran" placeholder="Teks suara muncul di sini, atau ketik langsung..."></textarea>
+          <button type="button" class="mic-btn-inline" id="micBtnInline" onclick="startMic()">🎤</button>
+        </div>
+        <div class="mic-actions">
+          <button class="btn-mic btn-start" id="btnStart" onclick="startMic()">🎤 Mulai Bicara</button>
+          <button class="btn-mic btn-stop"  id="btnStop"  onclick="stopMic()" disabled>⏹ Berhenti</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="keterangan">
+      <b>Keterangan Skala</b>
+      <span><span class="dot">1</span> = Sangat Tidak Puas</span>
+      <span><span class="dot">2</span> = Tidak Puas</span>
+      <span><span class="dot">3</span> = Cukup Puas</span>
+      <span><span class="dot">4</span> = Puas</span>
+      <span><span class="dot">5</span> = Sangat Puas</span>
+    </div>
+
+    <button id="submitBtn" onclick="submitForm()">Kirim Survei</button>
+    <div class="err hidden" id="errMsg"></div>
+  </div>
+
+  <div class="body hidden" id="thankYou">
+    <div class="msg">
+      <div class="ico">✓</div>
+      <h3>Terima Kasih!</h3>
+      <p>Tanggapan Anda telah berhasil kami terima.<br>Masukan Anda sangat berarti bagi peningkatan layanan kami.</p>
+    </div>
+  </div>
+
+  <div class="footer">© Lippo Land — Customer Satisfaction Survey</div>
+</div>
+
+<script>
+  // ⬇️ GANTI DENGAN URL DEPLOYMENT APPS SCRIPT ANDA
+  const API_URL = 'https://script.google.com/macros/s/GANTI_DENGAN_URL_ANDA/exec';
+
+  let QUESTIONS   = [];
+  let recognition = null;
+  let isRecording = false;
+
+  /* ── LOAD PERTANYAAN ── */
+  fetch(API_URL + '?action=getQuestions')
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (!res.success) throw new Error(res.error);
+      QUESTIONS = res.questions || [];
+      renderQuestions();
+      document.getElementById('loadingArea').classList.add('hidden');
+      document.getElementById('formArea').classList.remove('hidden');
+    })
+    .catch(function(err){
+      document.getElementById('loadingArea').innerHTML =
+        '<div style="color:#c0392b;padding:20px">⚠️ Gagal memuat: ' + err.message + '</div>';
+    });
+
+  /* ── RENDER PERTANYAAN ── */
+  function renderQuestions() {
+    const wrap = document.getElementById('questions');
+    wrap.innerHTML = '';
+    if (!QUESTIONS.length) {
+      wrap.innerHTML = '<div class="err">Belum ada pertanyaan di sheet "Pertanyaan".</div>';
+      document.getElementById('submitBtn').disabled = true;
+      return;
+    }
+    QUESTIONS.forEach(function(q, i) {
+      const n = i + 1;
+      const div = document.createElement('div');
+      div.className = 'question'; div.id = 'qcard' + n;
+      let scale = '';
+      for (let v = 1; v <= 5; v++) {
+        scale += '<label id="lbl_q'+n+'_'+v+'" onclick="selectScale('+n+','+v+')">' +
+                 '<input type="radio" name="q'+n+'" value="'+v+'">'+v+'</label>';
+      }
+      div.innerHTML = '<p><span class="num">'+n+'</span>'+q+'</p>' +
+        '<div class="scale">'+scale+'</div>' +
+        '<div class="scale-legend"><span>Sangat Tidak Puas</span><span>Sangat Puas</span></div>';
+      wrap.appendChild(div);
+    });
+  }
+
+  /* ── PILIH SKALA ── */
+  function selectScale(qNum, val) {
+    for (let v = 1; v <= 5; v++)
+      document.getElementById('lbl_q'+qNum+'_'+v).classList.remove('sel');
+    document.getElementById('lbl_q'+qNum+'_'+val).classList.add('sel');
+    document.querySelector('input[name="q'+qNum+'"][value="'+val+'"]').checked = true;
+    document.getElementById('qcard'+qNum).classList.add('answered');
+  }
+
+  /* ── START MIC ── */
+  function startMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setMicLabel('⚠️ Gunakan Chrome untuk fitur suara.','error'); return; }
+    if (isRecording) return;
+
+    recognition = new SR();
+    recognition.lang = 'id-ID';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    const saran = document.getElementById('saran');
+    const base  = saran.value.trim();
+
+    recognition.onstart = function() {
+      isRecording = true;
+      setMicState('listening');
+      setMicLabel('● Sedang merekam — bicara sekarang...','listening');
+      toggleButtons(true);
+    };
+    recognition.onresult = function(e) {
+      let txt = '';
+      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
+      saran.value = (base ? base + ' ' : '') + txt;
+    };
+    recognition.onerror = function(e) {
+      setMicLabel(e.error==='not-allowed'
+        ? '⚠️ Izin mikrofon ditolak — klik ikon 🔒 di address bar.'
+        : '⚠️ Error: '+e.error, 'error');
+      finishRecording();
+    };
+    recognition.onend = function() {
+      if (isRecording) { try { recognition.start(); } catch(e) { finishRecording(); } }
+    };
+    recognition.start();
+  }
+
+  /* ── STOP MIC ── */
+  function stopMic() {
+    isRecording = false;
+    if (recognition) { try { recognition.stop(); } catch(e){} }
+    finishRecording();
+  }
+
+  function finishRecording() {
+    isRecording = false;
+    setMicState('stopped');
+    setMicLabel('Rekaman selesai ✓ — edit teks jika perlu.','');
+    toggleButtons(false);
+  }
+
+  function setMicState(state) {
+    const box  = document.getElementById('saranBox');
+    const icon = document.getElementById('micIcon');
+    const wave = document.getElementById('micWave');
+    const btn  = document.getElementById('micBtnInline');
+    box.className  = 'saran-box ' + state;
+    icon.className = 'mic-icon '  + state;
+    wave.className = 'wave' + (state==='listening' ? ' show' : '');
+    if (state==='listening') {
+      icon.textContent='🎙'; btn.textContent='⏹';
+      btn.onclick=stopMic; btn.classList.add('recording');
+    } else {
+      icon.textContent='🎤'; btn.textContent='🎤';
+      btn.onclick=startMic; btn.classList.remove('recording');
+    }
+  }
+
+  function setMicLabel(text, type) {
+    const el = document.getElementById('micLabel');
+    el.textContent = text;
+    el.className = 'mic-label' + (type ? ' '+type : '');
+  }
+
+  function toggleButtons(rec) {
+    document.getElementById('btnStart').disabled = rec;
+    document.getElementById('btnStop').disabled  = !rec;
+  }
+
+  /* ── KIRIM SURVEI ── */
+  function submitForm() {
+    if (isRecording) stopMic();
+    const errMsg = document.getElementById('errMsg');
+    const data   = { saran: document.getElementById('saran').value.trim() };
+
+    for (let i = 1; i <= QUESTIONS.length; i++) {
+      const sel = document.querySelector('input[name="q'+i+'"]:checked');
+      if (!sel) {
+        errMsg.textContent = 'Mohon isi rating untuk pertanyaan nomor ' + i + '.';
+        errMsg.classList.remove('hidden');
+        document.getElementById('qcard'+i).scrollIntoView({behavior:'smooth',block:'center'});
+        return;
+      }
+      data['q'+i] = sel.value;
+    }
+    errMsg.classList.add('hidden');
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Mengirim...';
+
+    fetch(API_URL, {
+      method : 'POST',
+      body   : JSON.stringify(data)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res.success) {
+        document.getElementById('formArea').classList.add('hidden');
+        document.getElementById('thankYou').classList.remove('hidden');
+        window.scrollTo(0,0);
+      } else {
+        errMsg.textContent = 'Gagal: ' + res.error;
+        errMsg.classList.remove('hidden');
+        btn.disabled=false; btn.textContent='Kirim Survei';
+      }
+    })
+    .catch(function(err){
+      errMsg.textContent = 'Terjadi kesalahan: ' + err.message;
+      errMsg.classList.remove('hidden');
+      btn.disabled=false; btn.textContent='Kirim Survei';
+    });
+  }
+</script>
+</body>
+</html>
