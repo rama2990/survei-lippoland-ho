@@ -65,7 +65,7 @@
     .btn-mic { flex:1; padding:9px; border-radius:8px; border:none; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
     .btn-start { background:#2C8C99; color:#fff; }
     .btn-start:hover:not(:disabled) { background:#226B75; }
-    .btn-stop  { background:#f3f4f6; color:#374151; }
+    .btn-stop { background:#f3f4f6; color:#374151; }
     .btn-stop:hover:not(:disabled) { background:#e5e7eb; }
     .btn-mic:disabled { opacity:.4; cursor:not-allowed; }
 
@@ -74,7 +74,7 @@
     .keterangan span { white-space:nowrap; }
     .keterangan .dot { color:#2C8C99; font-weight:700; }
 
-    button#submitBtn { width:100%; padding:14px; border:none; border-radius:10px; background:#2C8C99; color:#fff; font-size:15px; font-weight:700; cursor:pointer; letter-spacing:.3px; transition:background .15s, transform .1s; }
+    button#submitBtn { width:100%; padding:14px; border:none; border-radius:10px; background:#2C8C99; color:#fff; font-size:15px; font-weight:700; cursor:pointer; letter-spacing:.3px; transition:background .15s,transform .1s; }
     button#submitBtn:hover:not(:disabled) { background:#226B75; }
     button#submitBtn:active:not(:disabled) { transform:scale(.99); }
     button#submitBtn:disabled { background:#9ca3af; cursor:not-allowed; }
@@ -161,28 +161,41 @@
 
 <script>
   // ⬇️ GANTI DENGAN URL DEPLOYMENT APPS SCRIPT ANDA
-  const API_URL = 'https://script.google.com/macros/s/AKfycbyatJL3L_L95h0SeK82e51fUzGt8463_j95ODhl_33nHX9Ap77qD6Bm-etm4FS5Vz6L/exec';
+  const API_URL = 'https://script.google.com/macros/s/GANTI_DENGAN_URL_ANDA/exec';
 
   let QUESTIONS   = [];
   let recognition = null;
   let isRecording = false;
 
-  /* ── LOAD PERTANYAAN ── */
-  fetch(API_URL + '?action=getQuestions')
-    .then(function(r){ return r.json(); })
-    .then(function(res){
-      if (!res.success) throw new Error(res.error);
+  /* ══════════════════════════════
+     LOAD PERTANYAAN via JSONP
+  ══════════════════════════════ */
+  function loadQuestions() {
+    const script = document.createElement('script');
+    window._cbQ = function(res) {
+      try { document.head.removeChild(script); } catch(e){}
+      if (!res.success) {
+        document.getElementById('loadingArea').innerHTML =
+          '<div style="color:#c0392b;padding:20px">⚠️ Gagal memuat: ' + (res.error||'unknown') + '</div>';
+        return;
+      }
       QUESTIONS = res.questions || [];
       renderQuestions();
       document.getElementById('loadingArea').classList.add('hidden');
       document.getElementById('formArea').classList.remove('hidden');
-    })
-    .catch(function(err){
+    };
+    script.onerror = function() {
       document.getElementById('loadingArea').innerHTML =
-        '<div style="color:#c0392b;padding:20px">⚠️ Gagal memuat: ' + err.message + '</div>';
-    });
+        '<div style="color:#c0392b;padding:20px">⚠️ Tidak dapat terhubung ke server. Periksa URL API.</div>';
+    };
+    script.src = API_URL + '?action=getQuestions&callback=_cbQ&t=' + Date.now();
+    document.head.appendChild(script);
+  }
+  loadQuestions();
 
-  /* ── RENDER PERTANYAAN ── */
+  /* ══════════════════════════════
+     RENDER PERTANYAAN
+  ══════════════════════════════ */
   function renderQuestions() {
     const wrap = document.getElementById('questions');
     wrap.innerHTML = '';
@@ -200,14 +213,17 @@
         scale += '<label id="lbl_q'+n+'_'+v+'" onclick="selectScale('+n+','+v+')">' +
                  '<input type="radio" name="q'+n+'" value="'+v+'">'+v+'</label>';
       }
-      div.innerHTML = '<p><span class="num">'+n+'</span>'+q+'</p>' +
+      div.innerHTML =
+        '<p><span class="num">'+n+'</span>'+q+'</p>' +
         '<div class="scale">'+scale+'</div>' +
         '<div class="scale-legend"><span>Sangat Tidak Puas</span><span>Sangat Puas</span></div>';
       wrap.appendChild(div);
     });
   }
 
-  /* ── PILIH SKALA ── */
+  /* ══════════════════════════════
+     PILIH SKALA
+  ══════════════════════════════ */
   function selectScale(qNum, val) {
     for (let v = 1; v <= 5; v++)
       document.getElementById('lbl_q'+qNum+'_'+v).classList.remove('sel');
@@ -216,7 +232,9 @@
     document.getElementById('qcard'+qNum).classList.add('answered');
   }
 
-  /* ── START MIC ── */
+  /* ══════════════════════════════
+     SPEECH TO TEXT
+  ══════════════════════════════ */
   function startMic() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setMicLabel('⚠️ Gunakan Chrome untuk fitur suara.','error'); return; }
@@ -242,9 +260,9 @@
       saran.value = (base ? base + ' ' : '') + txt;
     };
     recognition.onerror = function(e) {
-      setMicLabel(e.error==='not-allowed'
+      setMicLabel(e.error === 'not-allowed'
         ? '⚠️ Izin mikrofon ditolak — klik ikon 🔒 di address bar.'
-        : '⚠️ Error: '+e.error, 'error');
+        : '⚠️ Error: ' + e.error, 'error');
       finishRecording();
     };
     recognition.onend = function() {
@@ -253,7 +271,6 @@
     recognition.start();
   }
 
-  /* ── STOP MIC ── */
   function stopMic() {
     isRecording = false;
     if (recognition) { try { recognition.stop(); } catch(e){} }
@@ -274,20 +291,20 @@
     const btn  = document.getElementById('micBtnInline');
     box.className  = 'saran-box ' + state;
     icon.className = 'mic-icon '  + state;
-    wave.className = 'wave' + (state==='listening' ? ' show' : '');
-    if (state==='listening') {
-      icon.textContent='🎙'; btn.textContent='⏹';
-      btn.onclick=stopMic; btn.classList.add('recording');
+    wave.className = 'wave' + (state === 'listening' ? ' show' : '');
+    if (state === 'listening') {
+      icon.textContent = '🎙'; btn.textContent = '⏹';
+      btn.onclick = stopMic; btn.classList.add('recording');
     } else {
-      icon.textContent='🎤'; btn.textContent='🎤';
-      btn.onclick=startMic; btn.classList.remove('recording');
+      icon.textContent = '🎤'; btn.textContent = '🎤';
+      btn.onclick = startMic; btn.classList.remove('recording');
     }
   }
 
   function setMicLabel(text, type) {
     const el = document.getElementById('micLabel');
     el.textContent = text;
-    el.className = 'mic-label' + (type ? ' '+type : '');
+    el.className = 'mic-label' + (type ? ' ' + type : '');
   }
 
   function toggleButtons(rec) {
@@ -295,9 +312,12 @@
     document.getElementById('btnStop').disabled  = !rec;
   }
 
-  /* ── KIRIM SURVEI ── */
+  /* ══════════════════════════════
+     KIRIM SURVEI via JSONP
+  ══════════════════════════════ */
   function submitForm() {
     if (isRecording) stopMic();
+
     const errMsg = document.getElementById('errMsg');
     const data   = { saran: document.getElementById('saran').value.trim() };
 
@@ -316,27 +336,31 @@
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.textContent = 'Mengirim...';
 
-    fetch(API_URL, {
-      method : 'POST',
-      body   : JSON.stringify(data)
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(res){
+    // Kirim via JSONP
+    const script = document.createElement('script');
+    window._cbS = function(res) {
+      try { document.head.removeChild(script); } catch(e){}
       if (res.success) {
         document.getElementById('formArea').classList.add('hidden');
         document.getElementById('thankYou').classList.remove('hidden');
         window.scrollTo(0,0);
       } else {
-        errMsg.textContent = 'Gagal: ' + res.error;
+        errMsg.textContent = 'Gagal: ' + (res.error || 'unknown');
         errMsg.classList.remove('hidden');
-        btn.disabled=false; btn.textContent='Kirim Survei';
+        btn.disabled = false; btn.textContent = 'Kirim Survei';
       }
-    })
-    .catch(function(err){
-      errMsg.textContent = 'Terjadi kesalahan: ' + err.message;
+    };
+    script.onerror = function() {
+      errMsg.textContent = 'Tidak dapat terhubung ke server.';
       errMsg.classList.remove('hidden');
-      btn.disabled=false; btn.textContent='Kirim Survei';
-    });
+      btn.disabled = false; btn.textContent = 'Kirim Survei';
+    };
+
+    // Kirim semua data sebagai query parameter
+    const params = new URLSearchParams({ action:'submit', callback:'_cbS', t: Date.now() });
+    Object.keys(data).forEach(function(k){ params.append(k, data[k]); });
+    script.src = API_URL + '?' + params.toString();
+    document.head.appendChild(script);
   }
 </script>
 </body>
