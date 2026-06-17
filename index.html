@@ -126,10 +126,10 @@
         </div>
         <div class="saran-wrap">
           <textarea id="saran" placeholder="Teks suara muncul di sini, atau ketik langsung..."></textarea>
-          <button type="button" class="mic-btn-inline" id="micBtnInline" onclick="startMic()">🎤</button>
+          <button type="button" class="mic-btn-inline" id="micBtnInline" onclick="triggerMicButton()">🎤</button>
         </div>
         <div class="mic-actions">
-          <button class="btn-mic btn-start" id="btnStart" onclick="startMic()">🎤 Mulai Bicara</button>
+          <button class="btn-mic btn-start" id="btnStart" onclick="startNewRecordingSession()">🎤 Mulai Bicara</button>
           <button class="btn-mic btn-stop"  id="btnStop"  onclick="stopMic()" disabled>⏹ Berhenti</button>
         </div>
       </div>
@@ -160,13 +160,12 @@
 </div>
 
 <script>
-  // ⬇️ URL WEB APP GOOGLE APPS SCRIPT ANDA
   const API_URL = 'https://script.google.com/macros/s/AKfycbzyvWBDpdZYWs3NwdDvRQYKPyJ2KeF4BppwgQHAMIa-C2i16jivL13BH2UNArNa7PL6/exec';
 
   let QUESTIONS   = [];
   let recognition = null;
-  let isRecording = false;
-  let accumulatedText = ''; // Menyimpan teks final yang sudah dikunci
+  let isRecording = false; // Flag status tombol aktif dari user
+  let finalConfirmedText = ''; // Penampung teks yang sudah aman
 
   /* ══════════════════════════════
      LOAD PERTANYAAN via JSONP
@@ -234,22 +233,33 @@
   }
 
   /* ══════════════════════════════
-     SPEECH TO TEXT (FIXED DUPLICATION & AUTO-CLEAR)
+     SPEECH TO TEXT ANTI-DUPLIKASI ANDROID
   ══════════════════════════════ */
-  function startMic() {
+  function startNewRecordingSession() {
+    // Dipanggil saat user menekan tombol Mulai secara manual
+    document.getElementById('saran').value = '';
+    finalConfirmedText = '';
+    runSpeechRecognition();
+  }
+
+  function triggerMicButton() {
+    if (isRecording) {
+      stopMic();
+    } else {
+      startNewRecordingSession();
+    }
+  }
+
+  function runSpeechRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setMicLabel('⚠️ Gunakan Chrome untuk fitur suara.','error'); return; }
-    if (isRecording) return;
-
-    const saran = document.getElementById('saran');
-    
-    // 🌟 Kebutuhan User: Kosongkan text input setiap kali tombol mic ditekan
-    saran.value = '';
-    accumulatedText = ''; 
+    if (isRecording && recognition) return;
 
     recognition = new SR();
     recognition.lang = 'id-ID';
-    recognition.continuous = true;
+    
+    // Trik Android Chrome: Matikan continuous agar segmen suara langsung dikunci secara berkala tanpa bug buffer
+    recognition.continuous = false; 
     recognition.interimResults = true;
 
     recognition.onstart = function() {
@@ -261,24 +271,28 @@
 
     recognition.onresult = function(e) {
       let interimTranscript = '';
+      let currentResultText = '';
 
-      // Loop mendeteksi hasil baru dari indeks perubahan terakhir (resultIndex) untuk cegah duplikasi Android
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const transcript = e.results[i][0].transcript;
         if (e.results[i].isFinal) {
-          accumulatedText += transcript + ' ';
+          currentResultText += transcript + ' ';
         } else {
           interimTranscript += transcript;
         }
       }
 
-      // Gabungkan hasil yang sudah final dengan yang masih sementara diucapkan
-      let totalText = accumulatedText + interimTranscript;
-      saran.value = totalText.replace(/\s+/g, ' ').trim();
+      // Gabungkan teks lama yang sudah aman + teks final baru + teks sementara yang sedang diucapkan
+      let liveOutput = finalConfirmedText + currentResultText + interimTranscript;
+      document.getElementById('saran').value = liveOutput.replace(/\s+/g, ' ');
+      
+      if (currentResultText) {
+        finalConfirmedText += currentResultText;
+      }
     };
 
     recognition.onerror = function(e) {
-      if (e.error !== 'no-speech') {
+      if (e.error !== 'no-speech' && e.error !== 'aborted') {
         setMicLabel(e.error === 'not-allowed'
           ? '⚠️ Izin mikrofon ditolak — klik ikon 🔒 di address bar.'
           : '⚠️ Error: ' + e.error, 'error');
@@ -287,13 +301,13 @@
     };
 
     recognition.onend = function() {
-      // Jika masih dalam status merekam, hidupkan kembali jika sempat time-out otomatis
-      if (isRecording) { 
-        try { 
-          recognition.start(); 
-        } catch(err) { 
-          finishRecording(); 
-        } 
+      // Jika user tidak menekan tombol stop, otomatis nyalakan kembali untuk segmen kalimat berikutnya
+      if (isRecording) {
+        try {
+          recognition.start();
+        } catch(err) {
+          finishRecording();
+        }
       }
     };
 
@@ -302,7 +316,9 @@
 
   function stopMic() {
     isRecording = false;
-    if (recognition) { try { recognition.stop(); } catch(e){} }
+    if (recognition) { 
+      try { recognition.removeAttribute('onend'); recognition.stop(); } catch(e){} 
+    }
     finishRecording();
   }
 
@@ -311,6 +327,9 @@
     setMicState('stopped');
     setMicLabel('Rekaman selesai ✓ — edit teks jika perlu.','');
     toggleButtons(false);
+    // Bereskan teks spasi di akhir jika ada
+    const saran = document.getElementById('saran');
+    saran.value = saran.value.trim();
   }
 
   function setMicState(state) {
@@ -326,7 +345,7 @@
       btn.onclick = stopMic; btn.classList.add('recording');
     } else {
       icon.textContent = '🎤'; btn.textContent = '🎤';
-      btn.onclick = startMic; btn.classList.remove('recording');
+      btn.onclick = triggerMicButton; btn.classList.remove('recording');
     }
   }
 
@@ -365,7 +384,6 @@
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.textContent = 'Mengirim...';
 
-    // Kirim via JSONP
     const script = document.createElement('script');
     window._cbS = function(res) {
       try { document.head.removeChild(script); } catch(e){}
@@ -385,7 +403,6 @@
       btn.disabled = false; btn.textContent = 'Kirim Survei';
     };
 
-    // Kirim semua data sebagai query parameter
     const params = new URLSearchParams({ action:'submit', callback:'_cbS', t: Date.now() });
     Object.keys(data).forEach(function(k){ params.append(k, data[k]); });
     script.src = API_URL + '?' + params.toString();
