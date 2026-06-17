@@ -160,12 +160,13 @@
 </div>
 
 <script>
-  // ⬇️ GANTI DENGAN URL DEPLOYMENT APPS SCRIPT ANDA
+  // ⬇️ URL WEB APP GOOGLE APPS SCRIPT ANDA
   const API_URL = 'https://script.google.com/macros/s/AKfycbzyvWBDpdZYWs3NwdDvRQYKPyJ2KeF4BppwgQHAMIa-C2i16jivL13BH2UNArNa7PL6/exec';
 
   let QUESTIONS   = [];
   let recognition = null;
   let isRecording = false;
+  let accumulatedText = ''; // Menyimpan teks final yang sudah dikunci
 
   /* ══════════════════════════════
      LOAD PERTANYAAN via JSONP
@@ -233,20 +234,23 @@
   }
 
   /* ══════════════════════════════
-     SPEECH TO TEXT
+     SPEECH TO TEXT (FIXED DUPLICATION & AUTO-CLEAR)
   ══════════════════════════════ */
   function startMic() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setMicLabel('⚠️ Gunakan Chrome untuk fitur suara.','error'); return; }
     if (isRecording) return;
 
+    const saran = document.getElementById('saran');
+    
+    // 🌟 Kebutuhan User: Kosongkan text input setiap kali tombol mic ditekan
+    saran.value = '';
+    accumulatedText = ''; 
+
     recognition = new SR();
     recognition.lang = 'id-ID';
     recognition.continuous = true;
     recognition.interimResults = true;
-
-    const saran = document.getElementById('saran');
-    const base  = saran.value.trim();
 
     recognition.onstart = function() {
       isRecording = true;
@@ -254,20 +258,45 @@
       setMicLabel('● Sedang merekam — bicara sekarang...','listening');
       toggleButtons(true);
     };
+
     recognition.onresult = function(e) {
-      let txt = '';
-      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
-      saran.value = (base ? base + ' ' : '') + txt;
+      let interimTranscript = '';
+
+      // Loop mendeteksi hasil baru dari indeks perubahan terakhir (resultIndex) untuk cegah duplikasi Android
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          accumulatedText += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Gabungkan hasil yang sudah final dengan yang masih sementara diucapkan
+      let totalText = accumulatedText + interimTranscript;
+      saran.value = totalText.replace(/\s+/g, ' ').trim();
     };
+
     recognition.onerror = function(e) {
-      setMicLabel(e.error === 'not-allowed'
-        ? '⚠️ Izin mikrofon ditolak — klik ikon 🔒 di address bar.'
-        : '⚠️ Error: ' + e.error, 'error');
-      finishRecording();
+      if (e.error !== 'no-speech') {
+        setMicLabel(e.error === 'not-allowed'
+          ? '⚠️ Izin mikrofon ditolak — klik ikon 🔒 di address bar.'
+          : '⚠️ Error: ' + e.error, 'error');
+        finishRecording();
+      }
     };
+
     recognition.onend = function() {
-      if (isRecording) { try { recognition.start(); } catch(e) { finishRecording(); } }
+      // Jika masih dalam status merekam, hidupkan kembali jika sempat time-out otomatis
+      if (isRecording) { 
+        try { 
+          recognition.start(); 
+        } catch(err) { 
+          finishRecording(); 
+        } 
+      }
     };
+
     recognition.start();
   }
 
